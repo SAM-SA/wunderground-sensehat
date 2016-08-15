@@ -1,4 +1,4 @@
-import urllib2
+import urllib.request
 import json
 import os
 import glob
@@ -6,11 +6,11 @@ import time
 from ISStreamer.Streamer import Streamer
 
 # --------- User Settings ---------
-STATE = "CA"
-CITY = "San_Francisco"
+STATE = "PLACE YOUR COUNTRY/STATE HERE"
+CITY = "PLACE YOUR CITY HERE"
 WUNDERGROUND_API_KEY = "PLACE YOUR WUNDERGROUND API KEY HERE"
-BUCKET_NAME = ":partly_sunny: " + CITY + " Weather"
-BUCKET_KEY = "wu1"
+BUCKET_NAME = "SmartThings"
+BUCKET_KEY = "SmartThings_irpdoshn"
 ACCESS_KEY = "PLACE YOUR INITIAL STATE ACCESS KEY HERE"
 MINUTES_BETWEEN_READS = 15
 METRIC_UNITS = False
@@ -25,21 +25,22 @@ def isFloat(string):
 
 def get_conditions():
 	api_conditions_url = "http://api.wunderground.com/api/" + WUNDERGROUND_API_KEY + "/conditions/q/" + STATE + "/" + CITY + ".json"
+
 	try:
-		f = urllib2.urlopen(api_conditions_url)
+		f = urllib.request.urlopen(api_conditions_url)
 	except:
 		return []
-	json_conditions = f.read()
+	json_conditions = f.read().decode('utf-8')
 	f.close()
 	return json.loads(json_conditions)
 
 def get_astronomy():
 	api_astronomy_url = "http://api.wunderground.com/api/" + WUNDERGROUND_API_KEY + "/astronomy/q/" + STATE + "/" + CITY + ".json"
 	try:
-		f = urllib2.urlopen(api_astronomy_url)
+		f = urllib.request.urlopen(api_astronomy_url)
 	except:
 		return []
-	json_astronomy = f.read()
+	json_astronomy = f.read().decode('utf-8')
 	f.close()
 	return json.loads(json_astronomy)
 
@@ -53,7 +54,7 @@ def is_night(astronomy):
 	if ( (current_hour < sunrise_hour) or
 	     (current_hour > sunset_hour) or
 	     ((current_hour == sunrise_hour) and
-	      (current_min < sunrise_min)) or 
+	      (current_min < sunrise_min)) or
 	     ((current_hour == sunset_hour) and
 	      (current_min > sunset_min)) ):
 		return True
@@ -124,15 +125,15 @@ def wind_dir_icon (conditions, astronomy):
 		"WNW"      : ":arrow_upper_left:",
 		"WSW"      : ":arrow_lower_left:",
 	}
-	return icon.get(conditions['current_observation']['wind_dir'],":crescent_moon:")	
+	return icon.get(conditions['current_observation']['wind_dir'],":crescent_moon:")
 
 conditions = get_conditions()
 astronomy = get_astronomy()
 if ('current_observation' not in conditions) or ('moon_phase' not in astronomy):
-	print "Error! Wunderground API call failed, check your STATE and CITY and make sure your Wunderground API key is valid!"
+	print ("Error! Wunderground API call failed, check your STATE and CITY and make sure your Wunderground API key is valid!")
 	if 'error' in conditions['response']:
-		print "Error Type: " + conditions['response']['error']['type']
-		print "Error Description: " + conditions['response']['error']['description']
+		print ("Error Type: " + conditions['response']['error']['type'])
+		print ("Error Description: " + conditions['response']['error']['description'])
 	exit()
 else:
 	streamer = Streamer(bucket_name=BUCKET_NAME, bucket_key=BUCKET_KEY, access_key=ACCESS_KEY)
@@ -141,7 +142,7 @@ while True:
 	conditions = get_conditions()
 	astronomy = get_astronomy()
 	if ('current_observation' not in conditions) or ('moon_phase' not in astronomy):
-		print "Error! Wunderground API call failed. Skipping a reading then continuing ..."
+		print ("Error! Wunderground API call failed. Skipping a reading then continuing ...")
 	else:
 		humidity_pct = conditions['current_observation']['relative_humidity']
 		humidity = humidity_pct.replace("%","")
@@ -152,7 +153,7 @@ while True:
 		streamer.log(":crescent_moon: Moon Phase",moon_icon(astronomy['moon_phase']['phaseofMoon']))
 		streamer.log(":dash: " + CITY + " Wind Direction",wind_dir_icon(conditions, astronomy))
 		if (METRIC_UNITS):
-			if isFloat(conditions['current_observation']['temp_c']): 
+			if isFloat(conditions['current_observation']['temp_c']):
 				streamer.log(CITY + " Temperature(C)",conditions['current_observation']['temp_c'])
 			if isFloat(conditions['current_observation']['dewpoint_c']):
 				streamer.log(CITY + " Dewpoint(C)",conditions['current_observation']['dewpoint_c'])
@@ -167,7 +168,7 @@ while True:
 			if isFloat(conditions['current_observation']['precip_today_metric']):
 				streamer.log(":umbrella: " + CITY + " Precip Today(mm)",conditions['current_observation']['precip_today_metric'])
 		else:
-			if isFloat(conditions['current_observation']['temp_f']): 
+			if isFloat(conditions['current_observation']['temp_f']):
 				streamer.log(CITY + " Temperature(F)",conditions['current_observation']['temp_f'])
 			if isFloat(conditions['current_observation']['dewpoint_f']):
 				streamer.log(CITY + " Dewpoint(F)",conditions['current_observation']['dewpoint_f'])
